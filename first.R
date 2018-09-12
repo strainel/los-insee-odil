@@ -1,3 +1,7 @@
+# Prototype ODIL
+# Team 6
+# LOS hackathon Insee
+# 11-13/09/2018
 
 library(shiny)
 library(SPARQL)
@@ -15,9 +19,10 @@ server <- function(input, output)  {
 		q1 <- sprintf("
 			PREFIX skos:<http://www.w3.org/2004/02/skos/core#>
 
-			SELECT  ?poste ?libelle WHERE {
+			SELECT  ?poste ?libelle ?notation WHERE {
 				?poste skos:inScheme <http://id.insee.fr/codes/nafr2/naf> .
 				?poste skos:prefLabel ?libelle .
+				?poste skos:notation ?notation .
 				FILTER(lang(?libelle) = 'fr') .
 				FILTER(regex(?libelle, '%s')) .
 			}
@@ -25,20 +30,63 @@ server <- function(input, output)  {
 		result_activity <- SPARQL(url=endpoint1, query=q1)$results
 
 		if (nrow(result_activity) > 20) {
-			output$v_code_activity_1 = renderUI({
+			output$v_code_activity = renderUI({
 				h5(paste("Too much resultats",nrow(result_activity)))
 			})
 		}
 		else {
-			output$v_code_activity_1 = renderUI({
+			mylist_activity <- list()
+			for (i in 1:nrow(result_activity)) {
+				mylist_activity[[paste(result_activity$notation[i],result_activity$libelle[i])]] <- result_activity$notation[i]
+			}
+			#print(mylist_activity)
+			output$v_code_activity = renderUI({
 				tagList(
 				h5(nrow(result_activity)),
-				renderDataTable(result_activity)
+				radioButtons("radio_activity", h5("Matching activities"), choices = mylist_activity)
 				)
 			})
 		}
 	
 	})
+	
+
+	observeEvent(input$mytown,{
+	
+		endpoint2 <- "http://rdf.insee.fr/sparql"
+		q2 <- sprintf("
+			PREFIX igeo:<http://rdf.insee.fr/def/geo#>
+
+			SELECT ?commune ?code ?nom  WHERE {
+				?commune igeo:codeCommune ?code .
+				?commune igeo:nom ?nom .
+				FILTER(regex(?nom, '%s')) .
+			} LIMIT 300
+        ",input$mytown)
+		result_town <- SPARQL(url=endpoint2, query=q2)$results
+
+		if (nrow(result_town) > 20) {
+			output$v_code_town = renderUI({
+				h5(paste("Too much resultats",nrow(result_town)))
+			})
+		}
+		else {
+			mylist_town <- list()
+			for (i in 1:nrow(result_town)) {
+				mylist_town[[paste(result_town$nom[i])]] <- result_town$commune[i]
+			}
+			print(mylist_town)
+			output$v_code_town = renderUI({
+				tagList(
+				h5(nrow(result_town)),
+				radioButtons("radio_town", h5("Matching towns"), choices = mylist_town)
+				)
+			})
+		}
+	
+	})
+
+	
 
 }
 
@@ -62,10 +110,12 @@ ui <- fluidPage(
                         column(8,offset=2,tags$div(HTML("<h4>D'abord choisir son activité, puis sa commune</h4>")))
                       ),
 					  fluidRow(
-                        column(8,offset=2,tags$div(textInput("myactivity", h3("Activity"),value = ""))) 
+                        column(3,offset=1,tags$div(textInput("myactivity", h3("Activity"),value = ""))),
+                        column(3,offset=3,tags$div(textInput("mytown", h3("Town"),value = "")))
                       ),
                       fluidRow(
-                        column(3,offset=1,htmlOutput("v_code_activity_1"))
+                        column(5,offset=0,htmlOutput("v_code_activity")),
+                        column(5,offset=2,htmlOutput("v_code_town"))
                         )
 					)
         )
