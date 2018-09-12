@@ -60,7 +60,7 @@ server <- function(input, output)  {
 			SELECT ?commune ?code ?nom  WHERE {
 				?commune igeo:codeCommune ?code .
 				?commune igeo:nom ?nom .
-				FILTER(regex(?nom, '%s')) .
+				FILTER(regex(lcase(str(?nom)), lcase('%s'))) .
 			} LIMIT 300
         ",input$mytown)
 		result_town <- SPARQL(url=endpoint2, query=q2)$results
