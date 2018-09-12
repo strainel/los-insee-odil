@@ -7,8 +7,7 @@ options(encoding = "UTF-8")
 
 
 ### Start of server side ###
-server <- function(input, output) 
-{
+server <- function(input, output)  {
 
 	observeEvent(input$myactivity,{
 	
@@ -20,27 +19,24 @@ server <- function(input, output)
 				?poste skos:inScheme <http://id.insee.fr/codes/nafr2/naf> .
 				?poste skos:prefLabel ?libelle .
 				FILTER(lang(?libelle) = 'fr') .
-				FILTER(regex(?libelle,'%s'))
+				FILTER(regex(?libelle, '%s')) .
 			}
         ",input$myactivity)
-    result_activity <- SPARQL(url=endpoint1, query=q1)$results
+		result_activity <- SPARQL(url=endpoint1, query=q1)$results
 
-	if (nrow(res) > 20) {
-		output$v_code_activity_1 = renderUI({
-			h3("Too much resultats " nrow(result_activity))
+		if (nrow(result_activity) > 20) {
+			output$v_code_activity_1 = renderUI({
+				h5(paste("Too much resultats",nrow(result_activity)))
 			})
 		}
-	else {
-		output$v_code_activity_1 = renderUI({
-			tagList(
-			h3(nrow(result_activity)),
-			renderDataTable(result_activity)
-			)
+		else {
+			output$v_code_activity_1 = renderUI({
+				tagList(
+				h5(nrow(result_activity)),
+				renderDataTable(result_activity)
+				)
+			})
 		}
-	})
-	
-	
-	
 	
 	})
 
