@@ -5,6 +5,8 @@
 
 library(shiny)
 library(SPARQL)
+library(dplyr)
+library(ggplot2)
 
 
 options(encoding = "UTF-8")
@@ -97,6 +99,11 @@ server <- function(input, output)  {
 				h5(paste("Buildings permits (2017) :", getpermits('FRK21')))
 				)
 		})
+		
+		output$s_boxplotpoplegale = renderPlot({
+				db <- getbarplotpop(input$radio_town)
+				barplot(db$poptot, names.arg=db$age, ylab="Pop", xlab="Age")
+		})
 	})
 
 	getpoplegale <- function (depcom) {
@@ -142,7 +149,32 @@ server <- function(input, output)  {
 		return (result$bp[nrow(result)])
 	}
 	
-	
+	getbarplotpop <- function (depcom) {
+		endpoint2 <- "http://graphdb.linked-open-statistics.org/repositories/pop5"
+		q3 <- sprintf("
+			PREFIX qb: <http://purl.org/linked-data/cube#>
+			PREFIX mes: <http://id.insee.fr/meta/mesure/>
+			  PREFIX cod-age: <http://id.insee.fr/codes/ageq65/>
+			  PREFIX dim: <http://id.insee.fr/meta/dimension/>
+			  PREFIX cog2017-dim: <http://id.insee.fr/meta/cog2017/dimension/>
+			  PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+			  select ?obs ?pop  ?age ?depcom
+			  from <http://rdf.insee.fr/graphes/demo/pop5>
+					  where {?obs a qb:Observation .
+					  ?obs mes:pop15Plus ?pop .
+					  ?obs dim:ageq65 ?ag .
+					  ?ag skos:notation ?age .
+					  ?obs cog2017-dim:DepartementOuCommuneOuArrondissementMunicipal ?depcom .
+					  ?depcom skos:notation '%s' .
+					  }
+        ",depcom)
+		result <- SPARQL(url=endpoint2, query=q3)$results
+
+		database <- result %>%
+		  group_by(age) %>%
+		  summarise(poptot = sum(pop))
+		return (database)	
+	}
 	
 		
 		
@@ -181,7 +213,8 @@ ui <- fluidPage(
                         column(8,offset=2,tags$div(HTML("<h4>Second... enjoy some statistics</h4>")))
                       ),
                       fluidRow(
-                        column(3,offset=1,htmlOutput("s_poplegale"))
+                        column(3,offset=1,htmlOutput("s_poplegale")),
+                        column(3,offset=3,plotOutput("s_boxplotpoplegale"))
                       )
         )
     )
